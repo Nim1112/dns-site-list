@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DNS Operational Site List</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --surface: #ffffff;
+            --primary: #6366f1; /* Modern Indigo */
+            --primary-hover: #4f46e5;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px 16px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 14px;
+            color: var(--primary);
+            background: #e0e7ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* --- Search Section --- */
+        .search-card {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px; /* Prevents iOS auto-zoom */
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background-color: #f8fafc;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            background-color: var(--surface);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        /* --- Autocomplete Suggestions --- */
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 50;
+            box-shadow: var(--shadow-md);
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .suggestion-item:last-child { border-bottom: none; }
+        .suggestion-item:hover { background-color: #f1f5f9; }
+        .suggestion-item strong { display: block; font-size: 15px; color: var(--text-main); font-weight: 600; }
+        .suggestion-item small { color: var(--text-muted); font-size: 13px; }
+
+        /* --- Result Cards --- */
+        .result-card {
+            background: var(--surface);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            display: none;
+            animation: slideUp 0.4s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-card h2 {
+            margin-top: 0;
+            font-size: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .detail-row {
+            margin-bottom: 16px;
+        }
+
+        .detail-row span.label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .detail-row span.value {
+            display: block;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        /* --- Buttons --- */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            text-align: center;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: 15px;
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:active { transform: scale(0.97); }
+        .btn:hover { opacity: 0.9; }
+        .btn-call { background: linear-gradient(135deg, #10b981, #059669); } /* Modern Green */
+        .btn-nav { background: linear-gradient(135deg, #3b82f6, #2563eb); } /* Modern Blue */
+
+        /* Utility to hide elements */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Operational Site List</h1>
+    <div id="loading" class="loading">Loading database...</div>
+    
+    <div class="search-card">
+        <div class="input-group">
+            <label>Search by Site ID</label>
+            <input type="text" id="siteIdInput" placeholder="Enter Site ID..." autocomplete="off">
+            <div id="siteIdSuggestions" class="suggestions"></div>
+        </div>
+
+        <div class="input-group">
+            <label>Search by Site Name</label>
+            <input type="text" id="siteNameInput" placeholder="Enter Site Name..." autocomplete="off">
+            <div id="siteNameSuggestions" class="suggestions"></div>
+        </div>
+
+        <div class="input-group">
+            <label>Search by Depot</label>
+            <input type="text" id="depotInput" placeholder="Enter Depot Name..." autocomplete="off">
+            <div id="depotSuggestions" class="suggestions"></div>
+        </div>
+    </div>
+
+    <div id="siteResultCard" class="result-card">
+        <h2 id="siteCardTitle">Site Name</h2>
+        
+        <div class="detail-row">
+            <span class="label">District & Depot</span>
+            <span class="value" id="siteDistrictDepot"></span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="label">Depot Officer (FME_ID)</span>
+            <span class="value" id="siteOfficer"></span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Depot Contact</span>
+            <span class="value" id="siteContact"></span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Coordinates (Lat, Lon)</span>
+            <span class="value" id="siteLatLon"></span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Tower Details (Category / Type)</span>
+            <span class="value" id="siteTowerDetails"></span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Tower Owner</span>
+            <span class="value" id="siteOwner"></span>
+        </div>
+
+        <div class="btn-group">
+            <a href="#" id="siteBtnCall" class="btn btn-call">📞 Call</a>
+            <a href="#" id="siteBtnNav" class="btn btn-nav" target="_blank">🗺️ Map</a>
+        </div>
+    </div>
+
+    <div id="depotResultCard" class="result-card hidden">
+        <h2 id="depotCardTitle">Depot Name</h2>
+        
+        <div class="detail-row">
+            <span class="label">District</span>
+            <span class="value" id="depotDistrict"></span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Depot Officer (FME_ID)</span>
+            <span class="value" id="depotOfficer"></span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Depot Contact</span>
+            <span class="value" id="depotContact"></span>
+        </div>
+
+        <div class="btn-group">
+            <a href="#" id="depotBtnCall" class="btn btn-call">📞 Call Officer</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CSV_FILE = 'data.csv'; 
+    let siteData = [];
+    let uniqueDepots = [];
+
+    const loadingText = document.getElementById('loading');
+    
+    // Inputs
+    const siteIdInput = document.getElementById('siteIdInput');
+    const siteNameInput = document.getElementById('siteNameInput');
+    const depotInput = document.getElementById('depotInput');
+    
+    // Suggestions
+    const siteIdSuggestions = document.getElementById('siteIdSuggestions');
+    const siteNameSuggestions = document.getElementById('siteNameSuggestions');
+    const depotSuggestions = document.getElementById('depotSuggestions');
+
+    // Cards
+    const siteResultCard = document.getElementById('siteResultCard');
+    const depotResultCard = document.getElementById('depotResultCard');
+
+    // Load CSV Data
+    loadingText.style.display = 'block';
+    Papa.parse(CSV_FILE, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            siteData = results.data;
+            
+            // Extract unique depots with their officer info
+            const depotMap = {};
+            siteData.forEach(item => {
+                const depot = item['Depot'];
+                if (depot && depot !== 'N/A' && !depotMap[depot]) {
+                    depotMap[depot] = {
+                        Depot: depot,
+                        District: item['District'] || 'N/A',
+                        Officer: item['Depot_officer(FME_ID)'] || 'N/A',
+                        Contact: item['Depot_Contact'] || 'N/A'
+                    };
+                }
+            });
+            uniqueDepots = Object.values(depotMap);
+            loadingText.style.display = 'none';
+        },
+        error: function(err) {
+            loadingText.innerText = "Error loading data.csv. Check repository.";
+        }
+    });
+
+    // --- Search Handlers ---
+    
+    // 1. Site ID Search
+    siteIdInput.addEventListener('input', function() {
+        handleSearch(this.value, siteIdSuggestions, siteData, 'Site_ID', 'Site_Name', (match) => {
+            clearInputsExcept(siteIdInput);
+            siteIdInput.value = match['Site_ID'];
+            displaySite(match);
+        });
+    });
+
+    // 2. Site Name Search
+    siteNameInput.addEventListener('input', function() {
+        handleSearch(this.value, siteNameSuggestions, siteData, 'Site_Name', 'Site_ID', (match) => {
+            clearInputsExcept(siteNameInput);
+            siteNameInput.value = match['Site_Name'];
+            displaySite(match);
+        });
+    });
+
+    // 3. Depot Search
+    depotInput.addEventListener('input', function() {
+        handleSearch(this.value, depotSuggestions, uniqueDepots, 'Depot', 'District', (match) => {
+            clearInputsExcept(depotInput);
+            depotInput.value = match['Depot'];
+            displayDepot(match);
+        });
+    });
+
+    // Generic function to handle auto-suggest
+    function handleSearch(query, suggestionBox, dataArray, searchKey, subtitleKey, onSelect) {
+        query = query.toLowerCase().trim();
+        suggestionBox.innerHTML = '';
+        
+        if (query.length < 1) {
+            suggestionBox.style.display = 'none';
+            return;
+        }
+
+        const matches = dataArray.filter(item => {
+            const val = (item[searchKey] || '').toLowerCase();
+            return val.includes(query);
+        }).slice(0, 8); // Show top 8
+
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.innerHTML = `<strong>${match[searchKey]}</strong><small>${match[subtitleKey] || ''}</small>`;
+                div.onclick = () => {
+                    suggestionBox.style.display = 'none';
+                    onSelect(match);
+                };
+                suggestionBox.appendChild(div);
+            });
+            suggestionBox.style.display = 'block';
+        } else {
+            suggestionBox.style.display = 'none';
+        }
+    }
+
+    // Hide suggestions on outside click
+    document.addEventListener('click', function(e) {
+        if (e.target !== siteIdInput) siteIdSuggestions.style.display = 'none';
+        if (e.target !== siteNameInput) siteNameSuggestions.style.display = 'none';
+        if (e.target !== depotInput) depotSuggestions.style.display = 'none';
+    });
+
+    // Clear other inputs to avoid confusion
+    function clearInputsExcept(activeInput) {
+        if (activeInput !== siteIdInput) siteIdInput.value = '';
+        if (activeInput !== siteNameInput) siteNameInput.value = '';
+        if (activeInput !== depotInput) depotInput.value = '';
+    }
+
+    // --- Display Functions ---
+
+    function displaySite(site) {
+        depotResultCard.classList.add('hidden'); // Hide depot card
+
+        document.getElementById('siteCardTitle').innerText = `${site['Site_Name']} (${site['Site_ID']})`;
+        document.getElementById('siteDistrictDepot').innerText = `${site['District'] || 'N/A'} / ${site['Depot'] || 'N/A'}`;
+        document.getElementById('siteOfficer').innerText = site['Depot_officer(FME_ID)'] || 'N/A';
+        document.getElementById('siteContact').innerText = site['Depot_Contact'] || 'N/A';
+        document.getElementById('siteLatLon').innerText = `${site['Latitude'] || 'N/A'}, ${site['Longitude'] || 'N/A'}`;
+        document.getElementById('siteTowerDetails').innerText = `${site['Tower_Category'] || 'N/A'} / ${site['Tower_Type'] || 'N/A'}`;
+        document.getElementById('siteOwner').innerText = site['Tower_Owner'] || 'N/A';
+
+        // Buttons
+        const contactNum = site['Depot_Contact'];
+        const lat = site['Latitude'];
+        const lon = site['Longitude'];
+
+        const btnCall = document.getElementById('siteBtnCall');
+        if (contactNum && contactNum !== 'N/A') {
+            btnCall.href = `tel:${contactNum}`;
+            btnCall.classList.remove('hidden');
+        } else {
+            btnCall.classList.add('hidden');
+        }
+
+        const btnNav = document.getElementById('siteBtnNav');
+        if (lat && lon && lat !== 'N/A' && lon !== 'N/A') {
+            btnNav.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+            btnNav.classList.remove('hidden');
+        } else {
+            btnNav.classList.add('hidden');
+        }
+
+        siteResultCard.classList.remove('hidden');
+        siteResultCard.style.display = 'block';
+    }
+
+    function displayDepot(depot) {
+        siteResultCard.classList.add('hidden'); // Hide site card
+        siteResultCard.style.display = 'none';
+
+        document.getElementById('depotCardTitle').innerText = `Depot: ${depot.Depot}`;
+        document.getElementById('depotDistrict').innerText = depot.District;
+        document.getElementById('depotOfficer').innerText = depot.Officer;
+        document.getElementById('depotContact').innerText = depot.Contact;
+
+        const btnCall = document.getElementById('depotBtnCall');
+        if (depot.Contact && depot.Contact !== 'N/A') {
+            btnCall.href = `tel:${depot.Contact}`;
+            btnCall.classList.remove('hidden');
+        } else {
+            btnCall.classList.add('hidden');
+        }
+
+        depotResultCard.classList.remove('hidden');
+        depotResultCard.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
