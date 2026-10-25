@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MapPin, Search, X, Phone, ExternalLink, Sun, Moon } from 'lucide-react'
+import { MapPin, Search, X, Phone, ExternalLink, Sun, Moon, Heart } from 'lucide-react'
 import sites from './data/sites.json'
 import logo from './Dialog_Axiata_logo.svg.webp'
 
@@ -57,5 +57,6 @@ export default function App() {
         <div className="dialog-actions">{selected.Depot_Contact && selected.Depot_Contact !== 'N/A' && <a href={`tel:${value(selected.Depot_Contact)}`}><Phone size={18}/> Call depot officer</a>}{nav && <a className="secondary" href={nav} target="_blank" rel="noreferrer"><MapPin size={18}/> Open in Maps <ExternalLink size={16}/></a>}</div>
       </>}
     </dialog>
+    <footer className="footer"><span>Made with <Heart size={12} aria-label="love" fill="currentColor"/></span><span>© d3vil</span></footer>
   </main>
 }

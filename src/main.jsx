@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import './style.css'
+import './footer.css'
 import favicon from './Dialog_Axiata_logo.svg.webp'
 
 const icon = document.querySelector('link[rel="icon"]') ?? document.createElement('link')
